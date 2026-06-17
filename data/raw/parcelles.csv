@@ -1,0 +1,11 @@
+parcelle_id,superficie_ha,culture,type_sol,ph_sol,azote_N_ppm,phosphore_P_ppm,potassium_K_ppm,matiere_organique_pct,capacite_retention_eau,annee_derniere_analyse
+P-01,4.2,Tomate,Argileux,6.8,48.7,27.4,107.0,2.09,0.4,2022
+P-02,3.35,Manioc,Argilo-limoneux,6.9,51.7,21.8,186.9,2.09,0.26,2022
+P-03,6.67,Tomate,Sableux,5.8,33.6,37.3,150.1,2.05,0.42,2023
+P-04,5.05,Tomate,Limoneux,5.6,49.4,10.4,153.4,2.5,0.36,2022
+P-05,4.64,Maïs,Argilo-limoneux,7.2,17.1,31.9,145.7,3.96,0.29,2023
+P-06,4.41,Sorgho,Argilo-limoneux,6.7,54.3,44.4,136.1,4.13,0.31,2023
+P-07,6.37,Manioc,Argilo-limoneux,6.3,57.5,44.6,134.8,3.98,0.3,2023
+P-08,6.61,Haricot,Sableux,6.2,15.1,29.2,95.2,1.74,0.3,2022
+P-09,3.16,Haricot,Sableux,6.3,25.1,14.0,150.0,2.2,0.36,2022
+P-10,4.4,Sorgho,Sableux,6.7,38.1,30.9,111.5,2.4,0.26,2022

@@ -1,0 +1,142 @@
+# version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════
+#  FERME AGRICOLE — INFRASTRUCTURE BIG DATA
+#  Services : PostgreSQL · Airflow · FastAPI · Streamlit
+#  (PySpark/Jupyter tournent en local, voir requirements.txt)
+# ═══════════════════════════════════════════════════════════════
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.airflow
+  image: ferme_airflow:2.9.1
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://ferme:ferme2024@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: "46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLt0nfdstY="
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
+    PYTHONPATH: /opt/airflow/src
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./src:/opt/airflow/src
+    - ./data:/opt/airflow/data
+    - airflow_logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+
+  # ── PostgreSQL ────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: ferme_postgres
+    environment:
+      POSTGRES_USER: ferme
+      POSTGRES_PASSWORD: ferme2024
+      POSTGRES_DB: ferme_agricole
+      # Note : la DB secondaire "airflow" est créée par 01_schema.sql (CREATE DATABASE airflow),
+      # pas par cette variable (qui nécessite un script d'init tiers absent ici).
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ferme"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Airflow Webserver ─────────────────────────────────────────
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: ferme_airflow_web
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ── Airflow Scheduler ─────────────────────────────────────────
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: ferme_airflow_scheduler
+    command: scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # ── Airflow Init (crée l'admin une seule fois) ────────────────
+  airflow-init:
+    <<: *airflow-common
+    container_name: ferme_airflow_init
+    command: >
+      bash -c "
+        mkdir -p /opt/airflow/data/raw /opt/airflow/data/enriched /opt/airflow/data/models || true &&
+        airflow db migrate &&
+        airflow users create --username admin --password admin --firstname Admin --lastname Ferme --role Admin --email admin@ferme.com
+      "
+    restart: "no"
+
+  # ── FastAPI ───────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: ferme_api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ferme_agricole
+      DB_USER: ferme
+      DB_PASS: ferme2024
+    volumes:
+      - ./src/api:/app
+      - ./data:/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Streamlit Dashboard ───────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dashboard
+    container_name: ferme_dashboard
+    environment:
+      API_URL: http://api:8000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ferme_agricole
+      DB_USER: ferme
+      DB_PASS: ferme2024
+    volumes:
+      - ./src/dashboard:/app
+      - ./data:/data
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  airflow_logs:
