@@ -88,33 +88,42 @@ def task_charger_postgres(**context):
     import sys, os
     sys.path.insert(0, "/opt/airflow/src")
     import pandas as pd
-    from sqlalchemy import create_engine
+    from sqlalchemy import create_engine, inspect, text
 
     log.info("═" * 50)
     log.info("TÂCHE 3 : Chargement PostgreSQL")
     log.info("═" * 50)
 
-    DB_URL = (
-        f"postgresql://ferme:ferme2024@postgres:5432/ferme_agricole"
-    )
+    DB_URL = "postgresql://ferme:ferme2024@postgres:5432/ferme_agricole"
     engine = create_engine(DB_URL)
 
     DATA_ENRICHED = "/opt/airflow/data/enriched"
     DATA_RAW      = "/opt/airflow/data/raw"
 
     tables = {
-        "meteo":           (os.path.join(DATA_ENRICHED, "meteo_nettoyee.csv"),     "replace"),
-        "dataset_enrichi": (os.path.join(DATA_ENRICHED, "dataset_enrichi.csv"),   "replace"),
-        "marche":          (os.path.join(DATA_RAW,      "marche.csv"),             "replace"),
+        "meteo":           os.path.join(DATA_ENRICHED, "meteo_nettoyee.csv"),
+        "dataset_enrichi": os.path.join(DATA_ENRICHED, "dataset_enrichi.csv"),
+        "marche":          os.path.join(DATA_RAW,      "marche.csv"),
     }
 
-    for table, (path, mode) in tables.items():
-        if os.path.exists(path):
-            df = pd.read_csv(path)
-            df.to_sql(table, engine, if_exists=mode, index=False)
-            log.info(f"  ✓ Table {table} chargée — {len(df)} lignes")
-        else:
+    inspector = inspect(engine)
+    for table, path in tables.items():
+        if not os.path.exists(path):
             log.warning(f"  ✗ Fichier non trouvé : {path}")
+            continue
+        df = pd.read_csv(path)
+        if inspector.has_table(table):
+            # Filtrer uniquement les colonnes présentes dans la table (le CSV peut en avoir plus)
+            table_cols = {col["name"] for col in inspector.get_columns(table)}
+            cols_to_insert = [c for c in df.columns if c in table_cols]
+            df_insert = df[cols_to_insert]
+            with engine.begin() as conn:
+                conn.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY"))
+            df_insert.to_sql(table, engine, if_exists="append", index=False)
+            log.info(f"  ✓ Table {table} chargée — {len(df_insert)} lignes ({len(cols_to_insert)} colonnes)")
+        else:
+            df.to_sql(table, engine, if_exists="replace", index=False)
+            log.info(f"  ✓ Table {table} créée — {len(df)} lignes")
 
     log.info("Chargement PostgreSQL OK")
 

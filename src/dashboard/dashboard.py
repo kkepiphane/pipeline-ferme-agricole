@@ -23,6 +23,7 @@ warnings.filterwarnings("ignore")
 # ─── CHEMINS ─────────────────────────────────────────
 BASE     = os.path.dirname(os.path.abspath(__file__))
 ENRICHED = os.path.join(BASE, "../../data/enriched")
+RAW      = os.path.join(BASE, "../../data/raw")
 MODELS   = os.path.join(BASE, "../../data/models")
 
 # ─── CONFIG PAGE ─────────────────────────────────────
@@ -64,8 +65,8 @@ def charger_donnees():
                            parse_dates=["date_semis", "date_recolte"])
     meteo    = pd.read_csv(os.path.join(ENRICHED, "meteo_nettoyee.csv"), parse_dates=["date"])
     hebdo    = pd.read_csv(os.path.join(ENRICHED, "meteo_hebdo.csv"), parse_dates=["semaine_debut"])
-    parcelles= pd.read_csv(os.path.join(ENRICHED, "parcelles.csv"))
-    marche   = pd.read_csv(os.path.join(ENRICHED, "marche.csv"), parse_dates=["semaine"])
+    parcelles= pd.read_csv(os.path.join(RAW, "parcelles.csv"))
+    marche   = pd.read_csv(os.path.join(RAW, "marche.csv"), parse_dates=["semaine"])
     return df, meteo, hebdo, parcelles, marche
 
 @st.cache_data
@@ -298,10 +299,17 @@ def page_ml(ml):
             if "predictions" in ml:
                 pred = ml["predictions"]
                 fig2 = px.scatter(pred, x="rendement_reel", y="rendement_predit",
-                                  trendline="ols",
                                   color_discrete_sequence=["#2E8B57"],
                                   labels={"rendement_reel":"Rendement réel (t/ha)",
                                           "rendement_predit":"Rendement prédit (t/ha)"})
+                # Droite OLS via numpy (évite la dépendance statsmodels/scipy)
+                x_vals = pred["rendement_reel"].values
+                y_vals = pred["rendement_predit"].values
+                m, b = np.polyfit(x_vals, y_vals, 1)
+                x_line = np.linspace(x_vals.min(), x_vals.max(), 100)
+                fig2.add_scatter(x=x_line, y=m * x_line + b,
+                                 mode="lines", name="Tendance OLS",
+                                 line=dict(color="#1a5c38", width=2))
                 # Ligne parfaite
                 vmin = pred[["rendement_reel","rendement_predit"]].min().min()
                 vmax = pred[["rendement_reel","rendement_predit"]].max().max()

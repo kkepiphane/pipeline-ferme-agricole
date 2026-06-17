@@ -22,6 +22,7 @@ from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 DATA_ENRICHED = os.path.join(os.path.dirname(__file__), "../../data/enriched")
+DATA_RAW      = os.path.join(os.path.dirname(__file__), "../../data/raw")
 MODELS_DIR    = os.path.join(os.path.dirname(__file__), "../../data/models")
 os.makedirs(MODELS_DIR, exist_ok=True)
 
@@ -46,6 +47,9 @@ def entrainer_random_forest(df):
     # Encodage de la culture
     le = LabelEncoder()
     df = df.copy()
+    df["date_semis"]  = pd.to_datetime(df["date_semis"],  errors="coerce")
+    df["date_recolte"] = pd.to_datetime(df["date_recolte"], errors="coerce")
+    df["duree_cycle_jours"] = (df["date_recolte"] - df["date_semis"]).dt.days
     df["culture_enc"] = le.fit_transform(df["culture"])
     FEATURES.append("culture_enc")
 
@@ -156,7 +160,7 @@ def prevoir_prix_marche():
         print("  ✗ Prophet non installé. Pip install prophet.")
         return None
 
-    df_marche = pd.read_csv(os.path.join(DATA_ENRICHED, "marche.csv"),
+    df_marche = pd.read_csv(os.path.join(DATA_RAW, "marche.csv"),
                             parse_dates=["semaine"])
     cultures  = df_marche["culture"].unique()
     previsions_all = []
