@@ -1,0 +1,82 @@
+# ── Python ────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# ── Environnements virtuels ───────────────────────────────────────
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ── Variables d'environnement ─────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.env
+
+# ── Jupyter ───────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ── Données générées (enrichies & modèles ML) ────────────────────
+data/enriched/
+data/models/
+
+# Modèles sérialisés (toute l'arborescence)
+*.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
+
+# ── PySpark ───────────────────────────────────────────────────────
+spark-warehouse/
+derby.log
+metastore_db/
+*.crc
+
+# ── Airflow ───────────────────────────────────────────────────────
+airflow/logs/
+airflow/plugins/
+airflow.db
+standalone_admin_password.txt
+webserver_config.py
+
+# ── Docker (données persistées en volume local) ──────────────────
+postgres_data/
+.docker/
+
+# ── Logs & rapports ───────────────────────────────────────────────
+*.log
+logs/
+*.out
+
+# ── IDEs ──────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# ── OS ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Tests & coverage ─────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
